@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entoolize com - Sovereign Logic Gate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #050505;
+      --surface-color: rgba(255, 255, 255, 0.03);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #E0E0E0;
+      --text-muted: #888888;
+      --accent: #00C853;
+      --accent-glow: #00C85366; /* 40% opacity */
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      letter-spacing: 0.5px;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 50% -20%, #00C85314 0%, transparent 60%);
+      z-index: -1;
+    }
+
+    .glass-container {
+      background: var(--surface-color);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 3rem;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .glass-container::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, #00C8530C, transparent);
+      animation: sweep 4s infinite linear;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 2rem;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent);
+      border-radius: 50%;
+      margin-right: 8px;
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-bottom: 1rem;
+      color: #FFFFFF;
+      letter-spacing: -1px;
+    }
+
+    p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+      font-size: 1rem;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .metric-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      padding: 1.5rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+      border-color: #00C8534D;
+      background: #00C85305;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-size: 1.25rem;
+      color: #FFF;
+      font-weight: 400;
+    }
+
+    .primary-button {
+      display: inline-block;
+      width: 100%;
+      padding: 1rem;
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 400;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .primary-button:hover {
+      background: #00C8530C;
+      border-color: var(--accent);
+      color: #FFF;
+      box-shadow: 0 0 15px #00C8531A;
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes sweep {
+      0% { left: -100%; }
+      50% { left: 200%; }
+      100% { left: 200%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="glass-container">
+    <div class="status-indicator">
+      <div class="status-dot"></div>
+      Tier 2 Edge Active
+    </div>
+    <h1>Entoolize com</h1>
+    <p>This node is securely linked to the Conglomerate. Cognitive routing is online and standing by for authorization.</p>
+    
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Venture ID</div>
+        <div class="metric-value" style="color: var(--accent);">entoolize.com</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Latency</div>
+        <div class="metric-value">< 10ms</div>
+      </div>
+    </div>
+
+    <a href="/api/health" class="primary-button">Initialize Uplink</a>
+  </div>
+</body>
+</html>
