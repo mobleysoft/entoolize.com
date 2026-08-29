@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>entoolize.com | Mobleysoft Sovereign SPA</title>
+
+  <style>
+    /* ===== UNIVERSAL DESIGN TOKENS ===== */
+    :root {
+      --void: #04040a;
+      --gold: #c9a227;
+      --cream: #f0ead6;
+      --bone: #e8e0d5;
+      --cyan: #00d4ff;
+      --accent: #00ff00;
+      --muted: #888;
+      --line: rgba(255,255,255,0.15);
+
+      --font-serif: Georgia, serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "Courier New", monospace;
+
+      --spacing-xs: 0.25rem;
+      --spacing-sm: 0.5rem;
+      --spacing-md: 1rem;
+      --spacing-lg: 2rem;
+      --spacing-xl: 3rem;
+      --spacing-2xl: 4rem;
+
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --shadow-lg: 0 12px 24px rgba(0,0,0,0.5);
+    }
+
+    /* ===== BASE STYLES ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--void);
+      color: var(--cream);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      min-height: 100vh;
+    }
+
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--cyan); }
+
+    /* ===== FEATURE TOGGLES (33 features) ===== */
+    .feature-ai { display: none; }
+    .feature-analytics { display: none; }
+    .feature-auth { display: none; }
+    .feature-badge { display: none; }
+    .feature-blog { display: none; }
+    .feature-calendar { display: none; }
+    .feature-card { display: none; }
+    .feature-checkout { display: none; }
+    .feature-ecommerce { display: none; }
+    .feature-form { display: none; }
+    .feature-gallery { display: none; }
+    .feature-game { display: none; }
+    .feature-grid { display: none; }
+    .feature-live-chat { display: none; }
+    .feature-map { display: none; }
+    .feature-marketplace { display: none; }
+    .feature-messaging { display: none; }
+    .feature-modal-dialog { display: none; }
+    .feature-pagination { display: none; }
+    .feature-portfolio { display: none; }
+    .feature-pricing { display: none; }
+    .feature-product { display: none; }
+    .feature-profile { display: none; }
+    .feature-rating-review { display: none; }
+    .feature-search { display: none; }
+    .feature-social { display: none; }
+    .feature-table { display: none; }
+    .feature-tabs { display: none; }
+    .feature-user-profile { display: none; }
+    .feature-video-player { display: none; }
+
+    /* Enable features based on venture's feature set */
+    .feature-enabled.fs-ai .feature-ai { display: block; }
+    .feature-enabled.fs-analytics .feature-analytics { display: block; }
+    .feature-enabled.fs-auth .feature-auth { display: block; }
+    .feature-enabled.fs-badge .feature-badge { display: block; }
+    .feature-enabled.fs-blog .feature-blog { display: block; }
+    .feature-enabled.fs-calendar .feature-calendar { display: block; }
+    .feature-enabled.fs-card .feature-card { display: block; }
+    .feature-enabled.fs-checkout .feature-checkout { display: block; }
+    .feature-enabled.fs-ecommerce .feature-ecommerce { display: block; }
+    .feature-enabled.fs-form .feature-form { display: block; }
+    .feature-enabled.fs-gallery .feature-gallery { display: block; }
+    .feature-enabled.fs-game .feature-game { display: block; }
+    .feature-enabled.fs-grid .feature-grid { display: block; }
+    .feature-enabled.fs-live-chat .feature-live-chat { display: block; }
+    .feature-enabled.fs-map .feature-map { display: block; }
+    .feature-enabled.fs-marketplace .feature-marketplace { display: block; }
+    .feature-enabled.fs-messaging .feature-messaging { display: block; }
+    .feature-enabled.fs-modal-dialog .feature-modal-dialog { display: block; }
+    .feature-enabled.fs-pagination .feature-pagination { display: block; }
+    .feature-enabled.fs-portfolio .feature-portfolio { display: block; }
+    .feature-enabled.fs-pricing .feature-pricing { display: block; }
+    .feature-enabled.fs-product .feature-product { display: block; }
+    .feature-enabled.fs-profile .feature-profile { display: block; }
+    .feature-enabled.fs-rating-review .feature-rating-review { display: block; }
+    .feature-enabled.fs-search .feature-search { display: block; }
+    .feature-enabled.fs-social .feature-social { display: block; }
+    .feature-enabled.fs-table .feature-table { display: block; }
+    .feature-enabled.fs-tabs .feature-tabs { display: block; }
+    .feature-enabled.fs-user-profile .feature-user-profile { display: block; }
+    .feature-enabled.fs-video-player .feature-video-player { display: block; }
+
+    /* ===== UNIVERSAL COMPONENTS ===== */
+
+    header {
+      background: rgba(0,0,0,0.7);
+      border-bottom: 1px solid var(--line);
+      padding: var(--spacing-lg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+    }
+
+    nav a {
+      margin: 0 var(--spacing-lg);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    main {
+      min-height: calc(100vh - 200px);
+      padding: var(--spacing-xl) 0;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 var(--spacing-lg);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      margin-bottom: var(--spacing-md);
+      font-weight: bold;
+    }
+
+    h1 { font-size: 2.5rem; color: var(--gold); }
+    h2 { font-size: 2rem; color: var(--gold); }
+    h3 { font-size: 1.5rem; }
+
+    /* ===== FEATURE: AI ===== */
+    .ai-interface {
+      background: rgba(20, 20, 40, 0.9);
+      border: 1px solid var(--cyan);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      max-width: 800px;
+    }
+
+    .ai-interface h2 { color: var(--cyan); }
+
+    .ai-chat {
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+      padding: var(--spacing-md);
+      height: 300px;
+      overflow-y: auto;
+      margin-bottom: var(--spacing-md);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      border: 1px solid var(--line);
+    }
+
+    .ai-message {
+      margin: var(--spacing-sm) 0;
+      padding: var(--spacing-sm);
+      background: rgba(0, 212, 255, 0.1);
+      border-left: 3px solid var(--cyan);
+      border-radius: 4px;
+    }
+
+    .ai-input-group {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .ai-input-group input {
+      flex: 1;
+      padding: var(--spacing-sm);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--cream);
+    }
+
+    .ai-input-group button {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--cyan);
+      color: var(--void);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* ===== FEATURE: ANALYTICS ===== */
+    .analytics-dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .metric-card {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 2.5rem;
+      color: var(--gold);
+      font-weight: bold;
+      margin: var(--spacing-md) 0;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ===== FEATURE: AUTH ===== */
+    .auth-form {
+      background: rgba(20, 20, 40, 0.9);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      max-width: 400px;
+      margin: var(--spacing-xl) auto;
+    }
+
+    .auth-form h2 {
+      text-align: center;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group label {
+      display: block;
+      color: var(--cream);
+      margin-bottom: var(--spacing-sm);
+      font-weight: bold;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: var(--spacing-md);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--cream);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: var(--spacing-md);
+      background: var(--gold);
+      color: var(--void);
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* ===== FEATURE: BLOG ===== */
+    .blog-post {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+      max-width: 800px;
+    }
+
+    .blog-post h2 { margin-bottom: var(--spacing-sm); font-size: 1.5rem; }
+    .blog-meta { color: var(--muted); font-size: 0.85rem; margin-bottom: var(--spacing-md); }
+    .blog-content { line-height: 1.8; }
+
+    /* ===== FEATURE: GAMES ===== */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .game-card {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: var(--spacing-md);
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .game-card:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 16px rgba(201, 162, 39, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .game-card h3 { color: var(--gold); margin-bottom: var(--spacing-sm); }
+    .game-card p { color: var(--muted); font-size: 0.85rem; }
+
+    /* ===== FEATURE: PRICING ===== */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .pricing-card {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: var(--spacing-lg);
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .pricing-card:hover {
+      border-color: var(--gold);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-8px);
+    }
+
+    .pricing-card h3 { color: var(--gold); margin-bottom: var(--spacing-md); }
+    .pricing-card .price { font-size: 2rem; color: var(--gold); font-weight: bold; }
+
+    /* ===== FEATURE: PORTFOLIO ===== */
+    .portfolio-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .portfolio-item {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .portfolio-item:hover {
+      border-color: var(--gold);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-8px);
+    }
+
+    .portfolio-image {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, rgba(201, 162, 39, 0.1), rgba(0, 212, 255, 0.1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    .portfolio-content {
+      padding: var(--spacing-md);
+    }
+
+    /* ===== FEATURE: PROFILE ===== */
+    .user-details {
+      background: rgba(20, 20, 40, 0.9);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      max-width: 600px;
+    }
+
+    .user-field {
+      margin: var(--spacing-md) 0;
+      padding: var(--spacing-md);
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid var(--gold);
+      border-radius: 4px;
+    }
+
+    /* ===== FEATURE: GALLERY ===== */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .gallery-item {
+      aspect-ratio: 1;
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .gallery-item:hover {
+      border-color: var(--gold);
+      transform: scale(1.05);
+    }
+
+    /* ===== FEATURE: TABLE ===== */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--spacing-lg);
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .data-table th {
+      background: rgba(201, 162, 39, 0.1);
+      border-bottom: 1px solid var(--line);
+      padding: var(--spacing-md);
+      text-align: left;
+      color: var(--gold);
+      font-weight: bold;
+    }
+
+    .data-table td {
+      border-bottom: 1px solid var(--line);
+      padding: var(--spacing-md);
+    }
+
+    /* ===== FEATURE: SEARCH ===== */
+    .search-box {
+      background: rgba(20, 20, 40, 0.9);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: var(--spacing-lg);
+      max-width: 600px;
+      margin: var(--spacing-lg) auto;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: var(--spacing-md);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--cream);
+      font-size: 1rem;
+    }
+
+    /* ===== FEATURE: BADGE ===== */
+    .badge-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-lg);
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(201, 162, 39, 0.2);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+
+    /* ===== FEATURE: CARD ===== */
+    .card-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .card {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: var(--spacing-lg);
+      transition: all 0.3s;
+    }
+
+    .card:hover {
+      border-color: var(--gold);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ===== FEATURE: CHECKOUT ===== */
+    .checkout-form {
+      background: rgba(20, 20, 40, 0.9);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      max-width: 600px;
+      margin: var(--spacing-lg) auto;
+    }
+
+    .checkout-step {
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-lg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    /* ===== FEATURE: GRID ===== */
+    .grid-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .grid-item {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: var(--spacing-md);
+      text-align: center;
+    }
+
+    /* ===== FEATURE: LIVE CHAT ===== */
+    .live-chat-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      background: rgba(20, 20, 40, 0.95);
+      border: 1px solid var(--cyan);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(201, 162, 39, 0.2));
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--line);
+      font-weight: bold;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--spacing-md);
+      height: 300px;
+    }
+
+    .chat-input-area {
+      padding: var(--spacing-md);
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      padding: var(--spacing-sm);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--cream);
+    }
+
+    /* ===== FEATURE: MODAL DIALOG ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: rgba(20, 20, 40, 0.95);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      max-width: 500px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ===== FEATURE: PAGINATION ===== */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-lg);
+    }
+
+    .pagination a, .pagination span {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pagination a:hover {
+      background: rgba(201, 162, 39, 0.2);
+      border-color: var(--gold);
+    }
+
+    /* ===== FEATURE: PRODUCT ===== */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-lg);
+    }
+
+    .product-card {
+      background: rgba(20, 20, 40, 0.8);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .product-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, rgba(201, 162, 39, 0.1), rgba(0, 212, 255, 0.1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    .product-info {
+      padding: var(--spacing-md);
+    }
+
+    /* ===== FEATURE: RATING & REVIEW ===== */
+    .rating-container {
+      margin-top: var(--spacing-lg);
+    }
+
+    .rating-stars {
+      font-size: 1.5rem;
+      color: var(--gold);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .review-item {
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid var(--gold);
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      border-radius: 4px;
+    }
+
+    /* ===== FEATURE: TABS ===== */
+    .tab-navigation {
+      display: flex;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .tab-button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: var(--spacing-md) var(--spacing-lg);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-button.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ===== FEATURE: USER PROFILE ===== */
+    .user-profile-card {
+      background: rgba(20, 20, 40, 0.9);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      max-width: 600px;
+    }
+
+    .user-avatar {
+      width: 120px;
+      height: 120px;
+      background: rgba(201, 162, 39, 0.2);
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    /* ===== FEATURE: VIDEO PLAYER ===== */
+    .video-player {
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: var(--spacing-lg);
+    }
+
+    .video-frame {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: rgba(20, 20, 40, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    .video-controls {
+      background: rgba(0,0,0,0.8);
+      padding: var(--spacing-md);
+      display: flex;
+      gap: var(--spacing-md);
+      align-items: center;
+    }
+
+    .video-controls button {
+      background: var(--gold);
+      color: var(--void);
+      border: none;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: rgba(0,0,0,0.7);
+      border-top: 1px solid var(--line);
+      padding: var(--spacing-lg);
+      margin-top: var(--spacing-2xl);
+    }
+
+    footer .container {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header>
+    <div class="container">
+      <div class="logo">entoolize.com</div>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="feature-enabled fs-ai fs-analytics fs-auth fs-pricing fs-search">
+    <div class="container">
+
+      <!-- FEATURE: AI -->
+      <section class="feature-ai">
+        <div class="ai-interface">
+          <h2>AI Assistant</h2>
+          <p>Chat with our intelligent system.</p>
+          <div class="ai-chat" id="ai-chat">
+            <div class="ai-message">AI: Hello! How can I help?</div>
+          </div>
+          <div class="ai-input-group">
+            <input type="text" id="ai-input" placeholder="Ask me anything..." />
+            <button onclick="sendAIMessage()">Send</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: ANALYTICS -->
+      <section class="feature-analytics">
+        <h2>Analytics Dashboard</h2>
+        <div class="analytics-dashboard">
+          <div class="metric-card">
+            <div class="metric-label">Total Users</div>
+            <div class="metric-value">45.2K</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Engagement</div>
+            <div class="metric-value">87%</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Revenue</div>
+            <div class="metric-value">$127K</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: AUTH -->
+      <section class="feature-auth">
+        <form class="auth-form" onsubmit="handleAuthSubmit(event)">
+          <h2>Sign In</h2>
+          <div class="form-group">
+            <label for="auth-email">Email</label>
+            <input type="email" id="auth-email" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" placeholder="••••••••" required />
+          </div>
+          <button type="submit" class="submit-btn">Sign In</button>
+        </form>
+      </section>
+
+      <!-- FEATURE: BLOG -->
+      <section class="feature-blog">
+        <h2>Blog</h2>
+        <div class="blog-post">
+          <h2>Getting Started</h2>
+          <div class="blog-meta">Published 2026-08-24</div>
+          <div class="blog-content">
+            <p>Welcome to our blog. Share your thoughts and ideas here.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: GAMES -->
+      <section class="feature-games">
+        <h2>Game Catalog</h2>
+        <div class="game-grid">
+          <div class="game-card">
+            <h3>Game 1</h3>
+            <p>Interactive experience</p>
+          </div>
+          <div class="game-card">
+            <h3>Game 2</h3>
+            <p>Interactive experience</p>
+          </div>
+          <div class="game-card">
+            <h3>Game 3</h3>
+            <p>Interactive experience</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: PRICING -->
+      <section class="feature-pricing">
+        <h2>Pricing Plans</h2>
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <h3>Starter</h3>
+            <div class="price">$29/mo</div>
+            <p>Perfect for getting started</p>
+          </div>
+          <div class="pricing-card">
+            <h3>Professional</h3>
+            <div class="price">$99/mo</div>
+            <p>For growing businesses</p>
+          </div>
+          <div class="pricing-card">
+            <h3>Enterprise</h3>
+            <div class="price">Custom</div>
+            <p>For large organizations</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: PORTFOLIO -->
+      <section class="feature-portfolio">
+        <h2>Portfolio</h2>
+        <div class="portfolio-grid">
+          <div class="portfolio-item">
+            <div class="portfolio-image">🎨</div>
+            <div class="portfolio-content">
+              <h3>Project Alpha</h3>
+            </div>
+          </div>
+          <div class="portfolio-item">
+            <div class="portfolio-image">🚀</div>
+            <div class="portfolio-content">
+              <h3>Project Beta</h3>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: PROFILE -->
+      <section class="feature-profile">
+        <div class="user-details">
+          <h2>Your Profile</h2>
+          <div class="user-field">
+            <label>Name</label>
+            <input type="text" placeholder="Your name" />
+          </div>
+          <div class="user-field">
+            <label>Email</label>
+            <input type="text" placeholder="your@email.com" />
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: GALLERY -->
+      <section class="feature-gallery">
+        <h2>Gallery</h2>
+        <div class="gallery-grid">
+          <div class="gallery-item">📷</div>
+          <div class="gallery-item">🎬</div>
+          <div class="gallery-item">🖼️</div>
+          <div class="gallery-item">📸</div>
+        </div>
+      </section>
+
+      <!-- FEATURE: TABLE -->
+      <section class="feature-table">
+        <h2>Data</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Value</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Item 1</td>
+              <td>100</td>
+              <td>✓ Active</td>
+            </tr>
+            <tr>
+              <td>Item 2</td>
+              <td>200</td>
+              <td>✓ Active</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- FEATURE: SEARCH -->
+      <section class="feature-search">
+        <div class="search-box">
+          <h2>Search</h2>
+          <input type="text" class="search-input" placeholder="Search..." />
+        </div>
+      </section>
+
+      <!-- PLACEHOLDER FEATURES (will be populated by feature-attractor) -->
+      <!-- FEATURE: CALENDAR -->
+      <section class="feature-calendar">
+        <h2>Calendar</h2>
+        <p>Events and scheduling</p>
+      </section>
+
+      <!-- FEATURE: ECOMMERCE -->
+      <section class="feature-ecommerce">
+        <h2>Shop</h2>
+        <p>Products and checkout</p>
+      </section>
+
+      <!-- FEATURE: MAP -->
+      <section class="feature-map">
+        <h2>Map</h2>
+        <p>Location and geography</p>
+      </section>
+
+      <!-- FEATURE: MARKETPLACE -->
+      <section class="feature-marketplace">
+        <h2>Marketplace</h2>
+        <p>Vendors and listings</p>
+      </section>
+
+      <!-- FEATURE: MESSAGING -->
+      <section class="feature-messaging">
+        <h2>Messaging</h2>
+        <p>Inbox and notifications</p>
+      </section>
+
+      <!-- FEATURE: SOCIAL -->
+      <section class="feature-social">
+        <h2>Social</h2>
+        <p>Comments and interactions</p>
+      </section>
+
+      <!-- FEATURE: VIDEO -->
+      <section class="feature-video">
+        <h2>Video</h2>
+        <p>Streaming and players</p>
+      </section>
+
+      <!-- FEATURE: FORM -->
+      <section class="feature-form">
+        <h2>Contact Form</h2>
+        <form class="auth-form">
+          <div class="form-group">
+            <label>Your Message</label>
+            <textarea style="width:100%; padding: var(--spacing-md);" rows="5"></textarea>
+          </div>
+          <button type="submit" class="submit-btn">Send</button>
+        </form>
+      </section>
+
+      <!-- ===== NEW FEATURES (Expansion 2026-08-24) ===== -->
+
+      <!-- FEATURE: BADGE -->
+      <section class="feature-badge">
+        <h2>Status Badges</h2>
+        <div class="badge-container">
+          <span class="badge">Active</span>
+          <span class="badge">Premium</span>
+          <span class="badge">Featured</span>
+          <span class="badge">Popular</span>
+        </div>
+      </section>
+
+      <!-- FEATURE: CARD -->
+      <section class="feature-card">
+        <h2>Card Components</h2>
+        <div class="card-container">
+          <div class="card">
+            <h3>Card 1</h3>
+            <p>Content goes here</p>
+          </div>
+          <div class="card">
+            <h3>Card 2</h3>
+            <p>Content goes here</p>
+          </div>
+          <div class="card">
+            <h3>Card 3</h3>
+            <p>Content goes here</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: CHECKOUT -->
+      <section class="feature-checkout">
+        <h2>Checkout</h2>
+        <form class="checkout-form">
+          <div class="checkout-step">
+            <h3>Billing Information</h3>
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" placeholder="Your name" />
+            </div>
+          </div>
+          <div class="checkout-step">
+            <h3>Shipping Address</h3>
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" placeholder="Street address" />
+            </div>
+          </div>
+          <div class="checkout-step">
+            <h3>Payment</h3>
+            <div class="form-group">
+              <label>Card Number</label>
+              <input type="text" placeholder="1234 5678 9012 3456" />
+            </div>
+          </div>
+          <button type="submit" class="submit-btn">Complete Purchase</button>
+        </form>
+      </section>
+
+      <!-- FEATURE: GRID -->
+      <section class="feature-grid">
+        <h2>Grid Layout</h2>
+        <div class="grid-layout">
+          <div class="grid-item">Item 1</div>
+          <div class="grid-item">Item 2</div>
+          <div class="grid-item">Item 3</div>
+          <div class="grid-item">Item 4</div>
+          <div class="grid-item">Item 5</div>
+          <div class="grid-item">Item 6</div>
+        </div>
+      </section>
+
+      <!-- FEATURE: LIVE CHAT -->
+      <section class="feature-live-chat">
+        <div class="live-chat-widget">
+          <div class="chat-header">💬 Live Chat Support</div>
+          <div class="chat-messages">
+            <div style="margin-bottom: var(--spacing-sm); color: var(--muted); font-size: 0.85rem;">
+              Support: Hello! How can we help?
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" placeholder="Type message..." />
+            <button style="background: var(--gold); color: var(--void); border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Send</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: MODAL DIALOG -->
+      <section class="feature-modal-dialog">
+        <h2>Modal Dialog</h2>
+        <button class="submit-btn" style="max-width: 200px;">Open Modal</button>
+        <div class="modal-overlay">
+          <div class="modal-content">
+            <h2>Modal Title</h2>
+            <p>This is a modal dialog box.</p>
+            <button class="submit-btn">Close</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: PAGINATION -->
+      <section class="feature-pagination">
+        <h2>Pagination</h2>
+        <div class="pagination">
+          <a href="#">← Prev</a>
+          <span>1</span>
+          <a href="#">2</a>
+          <a href="#">3</a>
+          <a href="#">Next →</a>
+        </div>
+      </section>
+
+      <!-- FEATURE: PRODUCT -->
+      <section class="feature-product">
+        <h2>Products</h2>
+        <div class="product-grid">
+          <div class="product-card">
+            <div class="product-image">📦</div>
+            <div class="product-info">
+              <h3>Product 1</h3>
+              <p style="color: var(--gold); font-weight: bold;">$29.99</p>
+            </div>
+          </div>
+          <div class="product-card">
+            <div class="product-image">📦</div>
+            <div class="product-info">
+              <h3>Product 2</h3>
+              <p style="color: var(--gold); font-weight: bold;">$49.99</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: RATING & REVIEW -->
+      <section class="feature-rating-review">
+        <h2>Reviews & Ratings</h2>
+        <div class="rating-container">
+          <div class="rating-stars">★★★★★ (4.8)</div>
+          <div class="review-item">
+            <strong>Great product!</strong>
+            <p>Really happy with this purchase. Fast shipping too!</p>
+          </div>
+          <div class="review-item">
+            <strong>Highly recommended</strong>
+            <p>Excellent quality and customer service.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: TABS -->
+      <section class="feature-tabs">
+        <h2>Tabbed Content</h2>
+        <div class="tab-navigation">
+          <button class="tab-button active" onclick="this.classList.add('active')">Tab 1</button>
+          <button class="tab-button">Tab 2</button>
+          <button class="tab-button">Tab 3</button>
+        </div>
+        <div class="tab-content active">
+          <p>Content for Tab 1</p>
+        </div>
+        <div class="tab-content">
+          <p>Content for Tab 2</p>
+        </div>
+        <div class="tab-content">
+          <p>Content for Tab 3</p>
+        </div>
+      </section>
+
+      <!-- FEATURE: USER PROFILE -->
+      <section class="feature-user-profile">
+        <div class="user-profile-card">
+          <div class="user-avatar">👤</div>
+          <h2>User Profile</h2>
+          <div class="user-field">
+            <label><strong>Name:</strong> John Mobley</label>
+          </div>
+          <div class="user-field">
+            <label><strong>Email:</strong> john@example.com</label>
+          </div>
+          <div class="user-field">
+            <label><strong>Member Since:</strong> 2026</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURE: VIDEO PLAYER -->
+      <section class="feature-video-player">
+        <h2>Video Player</h2>
+        <div class="video-player">
+          <div class="video-frame">▶️ Video</div>
+          <div class="video-controls">
+            <button>Play</button>
+            <button>Pause</button>
+            <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;"></div>
+            <button>Fullscreen</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 entoolize.com | Part of Mobleysoft Conglomerate</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script>
+    function sendAIMessage() {
+      const input = document.getElementById('ai-input');
+      const chat = document.getElementById('ai-chat');
+      if (input.value.trim()) {
+        const userMsg = document.createElement('div');
+        userMsg.className = 'ai-message';
+        userMsg.textContent = 'You: ' + input.value;
+        chat.appendChild(userMsg);
+        input.value = '';
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      alert('Sign in functionality coming soon');
+    }
+
+    document.addEventListener('keypress', (e) => {
+      if (e.target.id === 'ai-input' && e.key === 'Enter') {
+        sendAIMessage();
+      }
+    });
+  </script>
+</body>
+</html>
