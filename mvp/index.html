@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entoolize — Invoice to QuickBooks Bill Draft (MVP)</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; background:#0c0f14; color:#eee; margin:0; padding:2rem; }
+  h1 { font-size:1.4rem; }
+  .note { color:#8ec9ff; font-size:0.85rem; max-width:680px; line-height:1.4; }
+  textarea { width:100%; max-width:680px; height:200px; background:#111820; color:#eee; border:1px solid #2a3a4a; border-radius:6px; padding:0.6rem; font-family:monospace; }
+  button { margin-top:0.6rem; padding:0.6rem 1.2rem; background:#2f6fa8; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+  pre { background:#111820; padding:1rem; border-radius:6px; max-width:680px; overflow:auto; }
+  .conf { font-weight:bold; }
+</style>
+</head>
+<body>
+<h1>Entoolize — Vendor Invoice to QuickBooks Bill Draft</h1>
+<p class="note">MVP scope, honest version: paste the invoice's text (from a PDF's text layer,
+email body, or any text source) below. This runs real regex/heuristic field extraction --
+vendor, invoice #, dates, line items, totals -- and produces a QuickBooks Bill-object-shaped
+draft for your review, matching QuickBooks' actual field names (VendorRef, TxnDate, Line[],
+etc). It does not call the QuickBooks API itself (needs real OAuth credentials this environment
+doesn't have) and does not parse PDF binaries directly (no PDF text-extraction library is
+bundled) -- paste the text and this does the real field-mapping work.</p>
+
+<textarea id="input" placeholder="Paste invoice text here...">Acme Fabrication Co.
+Invoice Number: INV-2049
+Invoice Date: 03/14/2026
+Due Date: 04/13/2026
+Steel brackets  10  25.00  250.00
+Shipping  1  40.00  40.00
+Subtotal: 290.00
+Tax: 23.20
+Total Due: $313.20</textarea>
+<br>
+<button id="run">Extract fields</button>
+
+<h3>Extraction confidence</h3>
+<p id="conf" class="conf"></p>
+<h3>QuickBooks Bill draft (review before posting)</h3>
+<pre id="out"></pre>
+
+<script src="invoice-extract.js"></script>
+<script>
+function run() {
+  const text = document.getElementById('input').value;
+  const out = document.getElementById('out');
+  const conf = document.getElementById('conf');
+  try {
+    const r = extractInvoiceFields(text);
+    conf.textContent = `${Math.round(r.confidence * 100)}% of expected fields found` +
+      (r.confidence < 0.6 ? ' -- low confidence, review carefully before posting.' : '');
+    out.textContent = JSON.stringify(r.qbBillDraft, null, 2) +
+      '\n\n-- raw extracted fields --\n' + JSON.stringify(r.extracted, null, 2) +
+      '\n\n-- line items --\n' + JSON.stringify(r.lineItems, null, 2);
+  } catch (e) {
+    conf.textContent = 'Error: ' + e.message;
+    out.textContent = '';
+  }
+}
+document.getElementById('run').addEventListener('click', run);
+run();
+</script>
+</body>
+</html>
