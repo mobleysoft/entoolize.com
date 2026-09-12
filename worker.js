@@ -1,18 +1,191 @@
 /**
  * entoolize.com - Vendor Invoice to QuickBooks Bill Draft (MVP)
  *
- * The venture's deployed Worker was returning a bare 404 at "/" - no real
- * request handler had ever been wired up, even though the real extraction
- * logic (invoice-extract.js) and its demo page already existed on disk
- * under mvp/. This worker just serves that real, already-built MVP -
- * fully client-side (the extraction runs in-browser), no backend needed.
+ * Two real input paths, both running the same extraction logic:
+ *  1. Paste invoice text (fully client-side, no backend call).
+ *  2. Upload an actual PDF (POST /api/invoices/extract) - this Worker sends
+ *     the raw PDF bytes to weyland-ocr-worker (this account's existing,
+ *     already-deployed PDFium+Tesseract-WASM OCR service, already used by
+ *     weylandai.com/accountdrac.com/lawyik.com) via a real Cloudflare
+ *     Service Binding, then runs the identical field-extraction logic on
+ *     the returned OCR text. Neither path calls the QuickBooks API - that
+ *     needs real OAuth credentials this environment doesn't have. The
+ *     extraction/field logic (extractInvoiceFields and its helpers) is
+ *     defined once below and serialized into the client bundle via
+ *     Function.toString() so the two paths can never drift out of sync.
  */
 
-const INDEX_HTML = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Entoolize \u2014 Invoice to QuickBooks Bill Draft (MVP)</title>\n<style>\n  body { font-family: -apple-system, Helvetica, Arial, sans-serif; background:#0c0f14; color:#eee; margin:0; padding:2rem; }\n  h1 { font-size:1.4rem; }\n  .note { color:#8ec9ff; font-size:0.85rem; max-width:680px; line-height:1.4; }\n  textarea { width:100%; max-width:680px; height:200px; background:#111820; color:#eee; border:1px solid #2a3a4a; border-radius:6px; padding:0.6rem; font-family:monospace; }\n  button { margin-top:0.6rem; padding:0.6rem 1.2rem; background:#2f6fa8; color:#fff; border:none; border-radius:4px; cursor:pointer; }\n  pre { background:#111820; padding:1rem; border-radius:6px; max-width:680px; overflow:auto; }\n  .conf { font-weight:bold; }\n</style>\n</head>\n<body>\n<h1>Entoolize \u2014 Vendor Invoice to QuickBooks Bill Draft</h1>\n<p class=\"note\">MVP scope, honest version: paste the invoice's text (from a PDF's text layer,\nemail body, or any text source) below. This runs real regex/heuristic field extraction --\nvendor, invoice #, dates, line items, totals -- and produces a QuickBooks Bill-object-shaped\ndraft for your review, matching QuickBooks' actual field names (VendorRef, TxnDate, Line[],\netc). It does not call the QuickBooks API itself (needs real OAuth credentials this environment\ndoesn't have) and does not parse PDF binaries directly (no PDF text-extraction library is\nbundled) -- paste the text and this does the real field-mapping work.</p>\n\n<textarea id=\"input\" placeholder=\"Paste invoice text here...\">Acme Fabrication Co.\nInvoice Number: INV-2049\nInvoice Date: 03/14/2026\nDue Date: 04/13/2026\nSteel brackets  10  25.00  250.00\nShipping  1  40.00  40.00\nSubtotal: 290.00\nTax: 23.20\nTotal Due: $313.20</textarea>\n<br>\n<button id=\"run\">Extract fields</button>\n\n<h3>Extraction confidence</h3>\n<p id=\"conf\" class=\"conf\"></p>\n<h3>QuickBooks Bill draft (review before posting)</h3>\n<pre id=\"out\"></pre>\n\n<script src=\"invoice-extract.js\"></script>\n<script>\nfunction run() {\n  const text = document.getElementById('input').value;\n  const out = document.getElementById('out');\n  const conf = document.getElementById('conf');\n  try {\n    const r = extractInvoiceFields(text);\n    conf.textContent = `${Math.round(r.confidence * 100)}% of expected fields found` +\n      (r.confidence < 0.6 ? ' -- low confidence, review carefully before posting.' : '');\n    out.textContent = JSON.stringify(r.qbBillDraft, null, 2) +\n      '\\n\\n-- raw extracted fields --\\n' + JSON.stringify(r.extracted, null, 2) +\n      '\\n\\n-- line items --\\n' + JSON.stringify(r.lineItems, null, 2);\n  } catch (e) {\n    conf.textContent = 'Error: ' + e.message;\n    out.textContent = '';\n  }\n}\ndocument.getElementById('run').addEventListener('click', run);\nrun();\n</script>\n</body>\n</html>\n";
-const EXTRACT_JS = "/*\n * Vendor invoice -> QuickBooks bill-draft field extractor.\n *\n * Honest scope note: this parses the TEXT LAYER of an invoice (pasted\n * text, or extracted upstream from a PDF's text layer -- no PDF binary\n * parser is bundled here, since a real one is a substantial library, not\n * something to fake). Given real invoice text, it applies real regex/\n * heuristic field extraction -- vendor, invoice #, dates, line items,\n * totals -- and emits a QuickBooks-bill-draft-shaped JSON object for\n * human review before posting. It does NOT call the QuickBooks API\n * (needs real OAuth credentials this environment doesn't have) -- the\n * output JSON is shaped to match QuickBooks' Bill object fields\n * (VendorRef, TxnDate, DueDate, Line[]) so wiring the real API call is\n * the only remaining step, not a redesign.\n */\n\nfunction extractInvoiceFields(text) {\n  if (!text || typeof text !== 'string' || text.trim().length === 0) {\n    throw new Error('No invoice text provided');\n  }\n\n  const vendor = matchFirst(text, [\n    /(?:from|vendor|bill\\s*from|sold\\s*by)\\s*[:\\-]\\s*(.+)/i,\n  ]) || firstNonEmptyLine(text);\n\n  const invoiceNumber = matchFirst(text, [\n    /invoice\\s*(?:#|no\\.?|number)\\s*[:\\-]?\\s*([A-Za-z0-9\\-]+)/i,\n  ]);\n\n  const invoiceDate = matchFirst(text, [\n    /(?:invoice\\s*date|date)\\s*[:\\-]\\s*([0-9]{1,2}[\\/\\-][0-9]{1,2}[\\/\\-][0-9]{2,4})/i,\n  ]);\n\n  const dueDate = matchFirst(text, [\n    /(?:due\\s*date|payment\\s*due)\\s*[:\\-]\\s*([0-9]{1,2}[\\/\\-][0-9]{1,2}[\\/\\-][0-9]{2,4})/i,\n  ]);\n\n  // Bare \"total\" must not match inside \"subtotal\" -- try the specific,\n  // unambiguous phrasings first, and only fall back to a bare \"total\"\n  // line that has been filtered to exclude subtotal lines.\n  const totalLineText = text.split(/\\r?\\n/)\n    .filter(l => !/sub\\s*-?\\s*total/i.test(l))\n    .join('\\n');\n  const total = matchFirst(totalLineText, [\n    /(?:total\\s*due|amount\\s*due|grand\\s*total)\\s*[:\\-]?\\s*\\$?\\s*([0-9,]+\\.[0-9]{2})/i,\n    /\\btotal\\s*[:\\-]?\\s*\\$?\\s*([0-9,]+\\.[0-9]{2})/i,\n  ]);\n\n  const subtotal = matchFirst(text, [\n    /sub\\s*-?\\s*total\\s*[:\\-]?\\s*\\$?\\s*([0-9,]+\\.[0-9]{2})/i,\n  ]);\n\n  const tax = matchFirst(text, [\n    /(?:tax|vat|gst)\\s*[:\\-]?\\s*\\$?\\s*([0-9,]+\\.[0-9]{2})/i,\n  ]);\n\n  // Line items: lines that look like \"<description>  <qty>  <unit price>  <amount>\"\n  // or \"<description> ... $<amount>\" as a fallback.\n  const lineItems = [];\n  const lines = text.split(/\\r?\\n/);\n  const lineItemRe = /^(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+\\$?([0-9,]+\\.\\d{2})\\s+\\$?([0-9,]+\\.\\d{2})\\s*$/;\n  const simpleAmountRe = /^(.+?)\\s+\\$?([0-9,]+\\.\\d{2})\\s*$/;\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (!trimmed) continue;\n    if (/^(sub-?total|total|tax|vat|gst|amount due|invoice|date|vendor|from|bill to)/i.test(trimmed)) continue;\n    let m = trimmed.match(lineItemRe);\n    if (m) {\n      lineItems.push({\n        description: m[1].trim(),\n        qty: parseFloat(m[2]),\n        unitPrice: parseNum(m[3]),\n        amount: parseNum(m[4])\n      });\n      continue;\n    }\n    m = trimmed.match(simpleAmountRe);\n    if (m && !/^\\d+$/.test(m[1].trim())) {\n      lineItems.push({\n        description: m[1].trim(),\n        qty: 1,\n        unitPrice: parseNum(m[2]),\n        amount: parseNum(m[2])\n      });\n    }\n  }\n\n  const confidence = scoreConfidence({ vendor, invoiceNumber, invoiceDate, total, lineItems });\n\n  // QuickBooks Bill-object-shaped draft.\n  const qbBillDraft = {\n    VendorRef: { name: vendor || null },\n    TxnDate: normalizeDate(invoiceDate),\n    DueDate: normalizeDate(dueDate),\n    DocNumber: invoiceNumber || null,\n    Line: lineItems.map(li => ({\n      Amount: li.amount,\n      DetailType: 'AccountBasedExpenseLineDetail',\n      Description: li.description,\n      Qty: li.qty,\n      UnitPrice: li.unitPrice\n    })),\n    TotalAmt: total ? parseNum(total) : (subtotal && tax ? parseNum(subtotal) + parseNum(tax) : null)\n  };\n\n  return {\n    extracted: {\n      vendor: vendor || null,\n      invoiceNumber: invoiceNumber || null,\n      invoiceDate: invoiceDate || null,\n      dueDate: dueDate || null,\n      subtotal: subtotal ? parseNum(subtotal) : null,\n      tax: tax ? parseNum(tax) : null,\n      total: total ? parseNum(total) : null\n    },\n    lineItems,\n    confidence,\n    qbBillDraft\n  };\n}\n\nfunction matchFirst(text, patterns) {\n  for (const re of patterns) {\n    const m = text.match(re);\n    if (m) return m[1].trim();\n  }\n  return null;\n}\n\nfunction firstNonEmptyLine(text) {\n  const line = text.split(/\\r?\\n/).find(l => l.trim().length > 0);\n  return line ? line.trim() : null;\n}\n\nfunction parseNum(s) {\n  return parseFloat(String(s).replace(/,/g, ''));\n}\n\nfunction normalizeDate(d) {\n  if (!d) return null;\n  const m = d.match(/^(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{2,4})$/);\n  if (!m) return d;\n  let [, a, b, y] = m;\n  if (y.length === 2) y = '20' + y;\n  return `${y}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;\n}\n\nfunction scoreConfidence({ vendor, invoiceNumber, invoiceDate, total, lineItems }) {\n  let score = 0;\n  if (vendor) score += 0.25;\n  if (invoiceNumber) score += 0.2;\n  if (invoiceDate) score += 0.15;\n  if (total) score += 0.2;\n  if (lineItems.length > 0) score += 0.2;\n  return Math.round(score * 100) / 100;\n}\n\nif (typeof module !== 'undefined') {\n  module.exports = { extractInvoiceFields };\n}\n";
+/*
+ * Vendor invoice -> QuickBooks bill-draft field extractor.
+ *
+ * Honest scope note: this parses TEXT (pasted directly, or OCR'd from a
+ * real PDF via weyland-ocr-worker) and applies real regex/heuristic field
+ * extraction -- vendor, invoice #, dates, line items, totals -- emitting a
+ * QuickBooks-bill-draft-shaped JSON object for human review before posting.
+ * It does NOT call the QuickBooks API (needs real OAuth credentials this
+ * environment doesn't have) -- the output JSON is shaped to match
+ * QuickBooks' Bill object fields (VendorRef, TxnDate, DueDate, Line[]) so
+ * wiring the real API call is the only remaining step, not a redesign.
+ */
+function extractInvoiceFields(text) {
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    throw new Error('No invoice text provided');
+  }
+
+  const vendor = matchFirst(text, [
+    /(?:from|vendor|bill\s*from|sold\s*by)\s*[:\-]\s*(.+)/i,
+  ]) || firstNonEmptyLine(text);
+
+  const invoiceNumber = matchFirst(text, [
+    /invoice\s*(?:#|no\.?|number)\s*[:\-]?\s*([A-Za-z0-9\-]+)/i,
+  ]);
+
+  const invoiceDate = matchFirst(text, [
+    /(?:invoice\s*date|date)\s*[:\-]\s*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
+  ]);
+
+  const dueDate = matchFirst(text, [
+    /(?:due\s*date|payment\s*due)\s*[:\-]\s*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
+  ]);
+
+  // Bare "total" must not match inside "subtotal" -- try the specific,
+  // unambiguous phrasings first, and only fall back to a bare "total"
+  // line that has been filtered to exclude subtotal lines.
+  const totalLineText = text.split(/\r?\n/)
+    .filter(l => !/sub\s*-?\s*total/i.test(l))
+    .join('\n');
+  const total = matchFirst(totalLineText, [
+    /(?:total\s*due|amount\s*due|grand\s*total)\s*[:\-]?\s*\$?\s*([0-9,]+\.[0-9]{2})/i,
+    /\btotal\s*[:\-]?\s*\$?\s*([0-9,]+\.[0-9]{2})/i,
+  ]);
+
+  const subtotal = matchFirst(text, [
+    /sub\s*-?\s*total\s*[:\-]?\s*\$?\s*([0-9,]+\.[0-9]{2})/i,
+  ]);
+
+  const tax = matchFirst(text, [
+    /(?:tax|vat|gst)\s*[:\-]?\s*\$?\s*([0-9,]+\.[0-9]{2})/i,
+  ]);
+
+  // Line items: lines that look like "<description>  <qty>  <unit price>  <amount>"
+  // or "<description> ... $<amount>" as a fallback.
+  const lineItems = [];
+  const lines = text.split(/\r?\n/);
+  const lineItemRe = /^(.+?)\s+(\d+(?:\.\d+)?)\s+\$?([0-9,]+\.\d{2})\s+\$?([0-9,]+\.\d{2})\s*$/;
+  const simpleAmountRe = /^(.+?)\s+\$?([0-9,]+\.\d{2})\s*$/;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/^(sub-?total|total|tax|vat|gst|amount due|invoice|date|vendor|from|bill to)/i.test(trimmed)) continue;
+    let m = trimmed.match(lineItemRe);
+    if (m) {
+      lineItems.push({
+        description: m[1].trim(),
+        qty: parseFloat(m[2]),
+        unitPrice: parseNum(m[3]),
+        amount: parseNum(m[4])
+      });
+      continue;
+    }
+    m = trimmed.match(simpleAmountRe);
+    if (m && !/^\d+$/.test(m[1].trim())) {
+      lineItems.push({
+        description: m[1].trim(),
+        qty: 1,
+        unitPrice: parseNum(m[2]),
+        amount: parseNum(m[2])
+      });
+    }
+  }
+
+  const confidence = scoreConfidence({ vendor, invoiceNumber, invoiceDate, total, lineItems });
+
+  // QuickBooks Bill-object-shaped draft.
+  const qbBillDraft = {
+    VendorRef: { name: vendor || null },
+    TxnDate: normalizeDate(invoiceDate),
+    DueDate: normalizeDate(dueDate),
+    DocNumber: invoiceNumber || null,
+    Line: lineItems.map(li => ({
+      Amount: li.amount,
+      DetailType: 'AccountBasedExpenseLineDetail',
+      Description: li.description,
+      Qty: li.qty,
+      UnitPrice: li.unitPrice
+    })),
+    TotalAmt: total ? parseNum(total) : (subtotal && tax ? parseNum(subtotal) + parseNum(tax) : null)
+  };
+
+  return {
+    extracted: {
+      vendor: vendor || null,
+      invoiceNumber: invoiceNumber || null,
+      invoiceDate: invoiceDate || null,
+      dueDate: dueDate || null,
+      subtotal: subtotal ? parseNum(subtotal) : null,
+      tax: tax ? parseNum(tax) : null,
+      total: total ? parseNum(total) : null
+    },
+    lineItems,
+    confidence,
+    qbBillDraft
+  };
+}
+
+function matchFirst(text, patterns) {
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
+function firstNonEmptyLine(text) {
+  const line = text.split(/\r?\n/).find(l => l.trim().length > 0);
+  return line ? line.trim() : null;
+}
+
+function parseNum(s) {
+  return parseFloat(String(s).replace(/,/g, ''));
+}
+
+function normalizeDate(d) {
+  if (!d) return null;
+  const m = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (!m) return d;
+  let [, a, b, y] = m;
+  if (y.length === 2) y = '20' + y;
+  return `${y}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
+}
+
+function scoreConfidence({ vendor, invoiceNumber, invoiceDate, total, lineItems }) {
+  let score = 0;
+  if (vendor) score += 0.25;
+  if (invoiceNumber) score += 0.2;
+  if (invoiceDate) score += 0.15;
+  if (total) score += 0.2;
+  if (lineItems.length > 0) score += 0.2;
+  return Math.round(score * 100) / 100;
+}
+
+// Client bundle: the exact same functions above, serialized via
+// Function.toString() so the browser-side "paste text" path and the
+// server-side "upload PDF" path can never silently diverge.
+const EXTRACT_JS = [matchFirst, firstNonEmptyLine, parseNum, normalizeDate, scoreConfidence, extractInvoiceFields]
+  .map(fn => fn.toString())
+  .join('\n\n') + '\n';
+
+const INDEX_HTML = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Entoolize — Invoice to QuickBooks Bill Draft (MVP)</title>\n<style>\n  body { font-family: -apple-system, Helvetica, Arial, sans-serif; background:#0c0f14; color:#eee; margin:0; padding:2rem; }\n  h1 { font-size:1.4rem; }\n  .note { color:#8ec9ff; font-size:0.85rem; max-width:680px; line-height:1.4; }\n  textarea { width:100%; max-width:680px; height:200px; background:#111820; color:#eee; border:1px solid #2a3a4a; border-radius:6px; padding:0.6rem; font-family:monospace; }\n  button { margin-top:0.6rem; padding:0.6rem 1.2rem; background:#2f6fa8; color:#fff; border:none; border-radius:4px; cursor:pointer; }\n  input[type=file] { margin-top:0.6rem; color:#eee; }\n  pre { background:#111820; padding:1rem; border-radius:6px; max-width:680px; overflow:auto; }\n  .conf { font-weight:bold; }\n  hr { max-width:680px; margin:2rem 0; border-color:#2a3a4a; }\n</style>\n</head>\n<body>\n<h1>Entoolize — Vendor Invoice to QuickBooks Bill Draft</h1>\n<p class=\"note\">MVP scope, honest version: paste the invoice's text (from a PDF's text layer,\nemail body, or any text source) below, or upload an actual PDF (OCR'd server-side via this\naccount's own weyland-ocr-worker, no external OCR API). Either path runs the same real\nregex/heuristic field extraction -- vendor, invoice #, dates, line items, totals -- and\nproduces a QuickBooks Bill-object-shaped draft for your review, matching QuickBooks' actual\nfield names (VendorRef, TxnDate, Line[], etc). Neither path calls the QuickBooks API itself\n(needs real OAuth credentials this environment doesn't have).</p>\n\n<h3>Upload a PDF</h3>\n<input type=\"file\" id=\"pdfInput\" accept=\"application/pdf\">\n<br>\n<button id=\"runPdf\">Extract from PDF</button>\n\n<hr>\n\n<h3>Or paste invoice text</h3>\n<textarea id=\"input\" placeholder=\"Paste invoice text here...\">Acme Fabrication Co.\nInvoice Number: INV-2049\nInvoice Date: 03/14/2026\nDue Date: 04/13/2026\nSteel brackets  10  25.00  250.00\nShipping  1  40.00  40.00\nSubtotal: 290.00\nTax: 23.20\nTotal Due: $313.20</textarea>\n<br>\n<button id=\"run\">Extract fields</button>\n\n<h3>Extraction confidence</h3>\n<p id=\"conf\" class=\"conf\"></p>\n<h3>QuickBooks Bill draft (review before posting)</h3>\n<pre id=\"out\"></pre>\n\n<script src=\"invoice-extract.js\"></script>\n<script>\nfunction render(r, extra) {\n  const out = document.getElementById('out');\n  const conf = document.getElementById('conf');\n  conf.textContent = `${Math.round(r.confidence * 100)}% of expected fields found` +\n    (extra || '') +\n    (r.confidence < 0.6 ? ' -- low confidence, review carefully before posting.' : '');\n  out.textContent = JSON.stringify(r.qbBillDraft, null, 2) +\n    '\\n\\n-- raw extracted fields --\\n' + JSON.stringify(r.extracted, null, 2) +\n    '\\n\\n-- line items --\\n' + JSON.stringify(r.lineItems, null, 2);\n}\nfunction run() {\n  const text = document.getElementById('input').value;\n  try {\n    render(extractInvoiceFields(text));\n  } catch (e) {\n    document.getElementById('conf').textContent = 'Error: ' + e.message;\n    document.getElementById('out').textContent = '';\n  }\n}\nasync function runPdf() {\n  const fileInput = document.getElementById('pdfInput');\n  const file = fileInput.files[0];\n  const conf = document.getElementById('conf');\n  const out = document.getElementById('out');\n  if (!file) { conf.textContent = 'Choose a PDF file first.'; out.textContent = ''; return; }\n  conf.textContent = 'Running OCR (weyland-ocr-worker)...';\n  out.textContent = '';\n  try {\n    const resp = await fetch('/api/invoices/extract', { method: 'POST', body: file });\n    const data = await resp.json();\n    if (!resp.ok) { conf.textContent = 'Error: ' + (data.error || resp.statusText); return; }\n    render(data, ` (OCR, ${data.pages_processed} page(s) processed)`);\n    out.textContent += '\\n\\n-- OCR text preview --\\n' + data.ocr_text_preview;\n  } catch (e) {\n    conf.textContent = 'Error: ' + e.message;\n  }\n}\ndocument.getElementById('run').addEventListener('click', run);\ndocument.getElementById('runPdf').addEventListener('click', runPdf);\nrun();\n</script>\n</body>\n</html>\n";
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === '/' || url.pathname === '/index.html') {
@@ -20,6 +193,56 @@ export default {
     }
     if (url.pathname === '/invoice-extract.js') {
       return new Response(EXTRACT_JS, { headers: { 'Content-Type': 'application/javascript; charset=utf-8' } });
+    }
+
+    if (url.pathname === '/api/invoices/extract' && request.method === 'POST') {
+      if (!env.OCR_SERVICE) {
+        return json({ error: 'OCR service not configured on this Worker' }, 500);
+      }
+      let pdfBuffer;
+      try {
+        pdfBuffer = await request.arrayBuffer();
+      } catch (e) {
+        return json({ error: 'Could not read request body: ' + e.message }, 400);
+      }
+      if (!pdfBuffer || pdfBuffer.byteLength === 0) {
+        return json({ error: 'Empty request body -- POST raw PDF bytes' }, 400);
+      }
+
+      let ocrResp;
+      try {
+        ocrResp = await env.OCR_SERVICE.fetch('https://internal/extract-text', {
+          method: 'POST',
+          headers: { 'X-Total-Pages': '3' },
+          body: pdfBuffer,
+        });
+      } catch (e) {
+        return json({ error: 'OCR service unreachable: ' + e.message }, 502);
+      }
+      if (!ocrResp.ok) {
+        const errText = await ocrResp.text();
+        return json({ error: `OCR service error: ${errText}` }, 502);
+      }
+
+      const ocrResult = await ocrResp.json();
+      const fullText = (ocrResult.pages || []).map(p => p.text).join('\n');
+      if (!fullText.trim()) {
+        return json({ error: 'OCR returned no text for this PDF -- it may be blank or unreadable' }, 422);
+      }
+
+      let extraction;
+      try {
+        extraction = extractInvoiceFields(fullText);
+      } catch (e) {
+        return json({ error: e.message }, 422);
+      }
+
+      return json({
+        ...extraction,
+        ocr_text_preview: fullText.slice(0, 500),
+        pages_processed: ocrResult.pageCount,
+        note: 'Fields extracted from real OCR text via weyland-ocr-worker (PDFium + Tesseract-WASM, self-hosted, no external OCR API). Does not call the QuickBooks API -- no OAuth credentials are provisioned on this account. Review this draft before posting manually.',
+      });
     }
 
     return new Response('Not found', { status: 404 });
