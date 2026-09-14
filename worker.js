@@ -209,11 +209,27 @@ export default {
         return json({ error: 'Empty request body -- POST raw PDF bytes' }, 400);
       }
 
+      // Real bug found + fixed 2026-09-14 (depth audit): this used to send a
+      // hardcoded 'X-Total-Pages': '3', which silently truncated OCR to the
+      // PDF's first 3 pages regardless of its real length -- live-verified
+      // against a real 8-page PDF, which came back with pages_processed: 3
+      // and no indication the other 5 pages were ever dropped. Vendor
+      // invoices routinely run longer than 3 pages once itemized line items
+      // or attached statements are included, so this was real, silent data
+      // loss on the extraction this venture's whole MVP is built around.
+      // weyland-ocr-worker's own pageRange() (page-range.js) already caps
+      // 'X-Total-Pages' at the document's real page count via
+      // Math.min(documentPages, ...), so requesting a generous upper bound
+      // is safe -- it never over-processes a short document. 60 pages is a
+      // realistic ceiling for a vendor invoice/statement while still
+      // bounding worst-case OCR cost; ocrResult.hasMore/documentPageCount
+      // (already returned by the OCR worker, previously ignored here) are
+      // now surfaced honestly instead of assumed away.
       let ocrResp;
       try {
         ocrResp = await env.OCR_SERVICE.fetch('https://internal/extract-text', {
           method: 'POST',
-          headers: { 'X-Total-Pages': '3' },
+          headers: { 'X-Total-Pages': '60' },
           body: pdfBuffer,
         });
       } catch (e) {
@@ -237,11 +253,18 @@ export default {
         return json({ error: e.message }, 422);
       }
 
+      const truncated = !!ocrResult.hasMore;
+      const truncationWarning = truncated
+        ? ` WARNING: this PDF has ${ocrResult.documentPageCount} pages but only the first ${ocrResult.pageCount} were processed -- extraction may be missing fields from later pages.`
+        : '';
+
       return json({
         ...extraction,
         ocr_text_preview: fullText.slice(0, 500),
         pages_processed: ocrResult.pageCount,
-        note: 'Fields extracted from real OCR text via weyland-ocr-worker (PDFium + Tesseract-WASM, self-hosted, no external OCR API). Does not call the QuickBooks API -- no OAuth credentials are provisioned on this account. Review this draft before posting manually.',
+        document_page_count: ocrResult.documentPageCount,
+        truncated,
+        note: 'Fields extracted from real OCR text via weyland-ocr-worker (PDFium + Tesseract-WASM, self-hosted, no external OCR API). Does not call the QuickBooks API -- no OAuth credentials are provisioned on this account. Review this draft before posting manually.' + truncationWarning,
       });
     }
 
