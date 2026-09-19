@@ -209,7 +209,7 @@ export default {
         return json({ error: 'Empty request body -- POST raw PDF bytes' }, 400);
       }
 
-      // Real bug found + fixed 2026-09-14 (depth audit): this used to send a
+      // Real bug found 2026-09-14 (depth audit): this used to send a
       // hardcoded 'X-Total-Pages': '3', which silently truncated OCR to the
       // PDF's first 3 pages regardless of its real length -- live-verified
       // against a real 8-page PDF, which came back with pages_processed: 3
@@ -217,31 +217,66 @@ export default {
       // invoices routinely run longer than 3 pages once itemized line items
       // or attached statements are included, so this was real, silent data
       // loss on the extraction this venture's whole MVP is built around.
-      // weyland-ocr-worker's own pageRange() (page-range.js) already caps
-      // 'X-Total-Pages' at the document's real page count via
-      // Math.min(documentPages, ...), so requesting a generous upper bound
-      // is safe -- it never over-processes a short document. 60 pages is a
-      // realistic ceiling for a vendor invoice/statement while still
-      // bounding worst-case OCR cost; ocrResult.hasMore/documentPageCount
-      // (already returned by the OCR worker, previously ignored here) are
-      // now surfaced honestly instead of assumed away.
-      let ocrResp;
-      try {
-        ocrResp = await env.OCR_SERVICE.fetch('https://internal/extract-text', {
-          method: 'POST',
-          headers: { 'X-Total-Pages': '60' },
-          body: pdfBuffer,
-        });
-      } catch (e) {
-        return json({ error: 'OCR service unreachable: ' + e.message }, 502);
-      }
-      if (!ocrResp.ok) {
-        const errText = await ocrResp.text();
-        return json({ error: `OCR service error: ${errText}` }, 502);
+      //
+      // First fix attempt (committed 2026-09-14, deployed 2026-09-19) raised
+      // 'X-Total-Pages' to a single request for 60 pages, reasoning that
+      // weyland-ocr-worker's own pageRange() clamps to the document's real
+      // page count so a generous upper bound is safe. That reasoning was
+      // incomplete -- confirmed live 2026-09-19 by deploying it and testing
+      // against a real 8-page PDF (/Users/johnmobley/pdf/KAISER SUNSET.pdf):
+      // OCR-ing all 8 pages in one weyland-ocr-worker request hit its real
+      // per-request CPU ceiling ('Worker exceeded CPU time limit', the same
+      // failure mode weyland-ocr-worker's own index.js documents hitting at
+      // full-page 150dpi OCR over multiple pages). So the "fix" traded
+      // silent partial data for a hard failure on genuinely common
+      // multi-page real invoices/statements -- worse for the user, not
+      // better. The original hardcoded 3-page request is the one page count
+      // actually proven live to fit inside weyland-ocr-worker's per-request
+      // CPU budget (it succeeded against this same 8-page PDF before this
+      // fix existed).
+      //
+      // Real fix: request pages in sequential batches of that proven-safe
+      // size instead of one large request -- each batch is an independent
+      // call to weyland-ocr-worker with its own fresh CPU budget (Workers
+      // CPU-time limits only count active JS execution, not time spent
+      // awaiting a subrequest), so a genuinely long document is covered
+      // completely rather than either silently truncated or hard-failed.
+      // Bounded by MAX_PAGES so a pathological document (a full script
+      // mistakenly uploaded, not a real invoice) can't run unbounded -- if
+      // that bound is hit, hasMore/documentPageCount are surfaced honestly
+      // exactly as before, not hidden.
+      const BATCH_SIZE = 3;
+      const MAX_PAGES = 60;
+      const allPages = [];
+      let documentPageCount = null;
+      let hasMore = false;
+      let nextStart = 1;
+      while (nextStart <= MAX_PAGES) {
+        let batchResp;
+        try {
+          batchResp = await env.OCR_SERVICE.fetch('https://internal/extract-text', {
+            method: 'POST',
+            headers: { 'X-Start-Page': String(nextStart), 'X-Total-Pages': String(BATCH_SIZE) },
+            body: pdfBuffer,
+          });
+        } catch (e) {
+          if (allPages.length > 0) { hasMore = true; break; }
+          return json({ error: 'OCR service unreachable: ' + e.message }, 502);
+        }
+        if (!batchResp.ok) {
+          const errText = await batchResp.text();
+          if (allPages.length > 0) { hasMore = true; break; }
+          return json({ error: `OCR service error: ${errText}` }, 502);
+        }
+        const batch = await batchResp.json();
+        allPages.push(...(batch.pages || []));
+        documentPageCount = batch.documentPageCount;
+        hasMore = !!batch.hasMore;
+        if (!hasMore) break;
+        nextStart = batch.endPage + 1;
       }
 
-      const ocrResult = await ocrResp.json();
-      const fullText = (ocrResult.pages || []).map(p => p.text).join('\n');
+      const fullText = allPages.map(p => p.text).join('\n');
       if (!fullText.trim()) {
         return json({ error: 'OCR returned no text for this PDF -- it may be blank or unreadable' }, 422);
       }
@@ -253,17 +288,16 @@ export default {
         return json({ error: e.message }, 422);
       }
 
-      const truncated = !!ocrResult.hasMore;
-      const truncationWarning = truncated
-        ? ` WARNING: this PDF has ${ocrResult.documentPageCount} pages but only the first ${ocrResult.pageCount} were processed -- extraction may be missing fields from later pages.`
+      const truncationWarning = hasMore
+        ? ` WARNING: this PDF has ${documentPageCount} pages but only the first ${allPages.length} were processed -- extraction may be missing fields from later pages.`
         : '';
 
       return json({
         ...extraction,
         ocr_text_preview: fullText.slice(0, 500),
-        pages_processed: ocrResult.pageCount,
-        document_page_count: ocrResult.documentPageCount,
-        truncated,
+        pages_processed: allPages.length,
+        document_page_count: documentPageCount,
+        truncated: hasMore,
         note: 'Fields extracted from real OCR text via weyland-ocr-worker (PDFium + Tesseract-WASM, self-hosted, no external OCR API). Does not call the QuickBooks API -- no OAuth credentials are provisioned on this account. Review this draft before posting manually.' + truncationWarning,
       });
     }
