@@ -69,10 +69,23 @@ function extractInvoiceFields(text) {
 
   // Line items: lines that look like "<description>  <qty>  <unit price>  <amount>"
   // or "<description> ... $<amount>" as a fallback.
+  //
+  // Real bug found 2026-09-23 (depth audit): the fallback single-amount
+  // regex had no way to match a negative/credit line -- "Discount  -$10.00"
+  // or "Credit  ($15.00)" (both real, common invoice conventions for
+  // discounts/credits/adjustments) simply failed the regex entirely and
+  // were silently dropped from lineItems, not just mis-signed. Since
+  // qbBillDraft.TotalAmt is read separately from the invoice's own printed
+  // "Total Due" text, the draft's total was still correct, but its Line[]
+  // items silently didn't sum to that total with no indication why --
+  // exactly the kind of quiet discrepancy this venture's own bookkeeper
+  // target customer would have to notice and re-derive by hand. Fixed by
+  // accepting a leading "-" (with or without "$") or a parenthesized
+  // amount as negative, both real invoice conventions.
   const lineItems = [];
   const lines = text.split(/\r?\n/);
   const lineItemRe = /^(.+?)\s+(\d+(?:\.\d+)?)\s+\$?([0-9,]+\.\d{2})\s+\$?([0-9,]+\.\d{2})\s*$/;
-  const simpleAmountRe = /^(.+?)\s+\$?([0-9,]+\.\d{2})\s*$/;
+  const simpleAmountRe = /^(.+?)\s+(?:\(\$?([0-9,]+\.\d{2})\)|(-)?\$?([0-9,]+\.\d{2}))\s*$/;
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -89,11 +102,14 @@ function extractInvoiceFields(text) {
     }
     m = trimmed.match(simpleAmountRe);
     if (m && !/^\d+$/.test(m[1].trim())) {
+      // group 2 = parenthesized amount (always negative), group 3 = "-" sign,
+      // group 4 = unsigned amount paired with group 3.
+      const amount = m[2] !== undefined ? -parseNum(m[2]) : (m[3] ? -parseNum(m[4]) : parseNum(m[4]));
       lineItems.push({
         description: m[1].trim(),
         qty: 1,
-        unitPrice: parseNum(m[2]),
-        amount: parseNum(m[2])
+        unitPrice: amount,
+        amount
       });
     }
   }
