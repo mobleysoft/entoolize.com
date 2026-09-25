@@ -4,7 +4,14 @@ compatibility_date = "2024-05-12"
 
 [vars]
 ENVIRONMENT = "production"
+ENTOOLIZE_PLAN_PRICE_REF = "vpr_4214affe98db43e49e4005fe1d8e480a"
 
 [[services]]
 binding = "OCR_SERVICE"
 service = "weyland-ocr-worker"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "venture_mvp_db"
+database_id = "971d6c5d-ad04-424f-98c9-b3f46a482f96"
+
